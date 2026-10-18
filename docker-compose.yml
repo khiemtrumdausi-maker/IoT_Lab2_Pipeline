@@ -1,0 +1,38 @@
+services:
+  influxdb:
+    image: influxdb:2.7
+    ports: ["8086:8086"]
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin12345
+      DOCKER_INFLUXDB_INIT_ORG: ptit
+      DOCKER_INFLUXDB_INIT_BUCKET: iot_raw
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d          # retention policy cho du lieu tho
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: lab2-dev-token
+    volumes: [influx-data:/var/lib/influxdb2]
+
+  # Tao bucket du lieu da xu ly (giu lau hon: 365d) - chay 1 lan roi thoat
+  influx-init:
+    image: influxdb:2.7
+    depends_on: [influxdb]
+    restart: "no"
+    entrypoint: >
+      sh -c "sleep 8 && influx bucket create -n iot_processed -o ptit -r 365d
+      --host http://influxdb:8086 -t lab2-dev-token || true"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports: ["3000:3000"]
+    depends_on: [influxdb]
+    volumes: [grafana-data:/var/lib/grafana]
+
+  # Tuy chon: broker cuc bo de test khong can Wokwi (Wokwi KHONG toi duoc broker localhost)
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1884:1883"]
+    command: mosquitto -c /mosquitto-no-auth.conf
+
+volumes:
+  influx-data:
+  grafana-data:
